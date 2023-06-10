@@ -7,12 +7,12 @@ import torch
 import torch.nn as nn
 from hivemind.utils.logging import get_logger
 from transformers.modeling_outputs import BaseModelOutputWithPastAndCrossAttentions
-from transformers.models.llama import (
-    LlamaConfig,
-    LlamaForCausalLM,
-    LlamaForSequenceClassification,
-    LlamaModel,
-    LlamaPreTrainedModel,
+from transformers.models.bloom import (
+    BloomConfig,
+    BloomForCausalLM,
+    BloomForSequenceClassification,
+    BloomModel,
+    BloomPreTrainedModel,
 )
 
 from petals.bloom.modeling_utils import LMHead
@@ -25,7 +25,7 @@ from petals.utils.misc import DUMMY
 logger = get_logger(__name__)
 
 
-class DistributedBloomConfig(LlamaConfig, SequenceManagerConfig):
+class DistributedBloomConfig(BloomConfig, SequenceManagerConfig):
     """
     A bloom config that contains information about DHT peers.
     To create a distributed model, one must provide dht_prefix and either initial_peers or dht.
@@ -83,7 +83,7 @@ class _FromPretrainedDefaultsMixin:
             torch_dtype = "auto"
         return super().from_pretrained(*args, low_cpu_mem_usage=low_cpu_mem_usage, torch_dtype=torch_dtype, **kwargs)
 
-    from_pretrained.__doc__ = LlamaPreTrainedModel.from_pretrained.__doc__.replace(
+    from_pretrained.__doc__ = BloomPreTrainedModel.from_pretrained.__doc__.replace(
         "low_cpu_mem_usage(`bool`, *optional*)",
         "low_cpu_mem_usage(`bool`, *optional*, defaults to `True` in Petals)",
     ).replace(
@@ -92,10 +92,10 @@ class _FromPretrainedDefaultsMixin:
     )
 
 
-class DistributedBloomModel(_FromPretrainedDefaultsMixin, LlamaModel):
-    """LlamaModel, but all transformer layers are hosted by the swarm"""
+class DistributedBloomModel(_FromPretrainedDefaultsMixin, BloomModel):
+    """BloomModel, but all transformer layers are hosted by the swarm"""
 
-    _keys_to_ignore_on_load_missing = LlamaModel._keys_to_ignore_on_load_missing + [
+    _keys_to_ignore_on_load_missing = BloomModel._keys_to_ignore_on_load_missing + [
         r"^(intermediate_)?prompt_embeddings\.weight$",
     ]
 
@@ -212,11 +212,11 @@ class DistributedBloomModel(_FromPretrainedDefaultsMixin, LlamaModel):
         )
 
 
-class DistributedBloomForCausalLM(_FromPretrainedDefaultsMixin, RemoteGenerationMixin, LlamaForCausalLM):
-    """DistributedLlamaForCausalLM, but all transformer layers are hosted by the swarm"""
+class DistributedBloomForCausalLM(_FromPretrainedDefaultsMixin, RemoteGenerationMixin, BloomForCausalLM):
+    """DistributedBloomForCausalLM, but all transformer layers are hosted by the swarm"""
 
     _keys_to_ignore_on_load_missing = (
-        LlamaForCausalLM._keys_to_ignore_on_load_missing
+        BloomForCausalLM._keys_to_ignore_on_load_missing
         + DistributedBloomModel._keys_to_ignore_on_load_missing
         + [r"^lm_head.word_embeddings\.weight$"]  # Missing since they are shared with input embeddings
     )
@@ -224,7 +224,7 @@ class DistributedBloomForCausalLM(_FromPretrainedDefaultsMixin, RemoteGeneration
     config_class = DistributedBloomConfig
 
     def __init__(self, config: DistributedBloomConfig):
-        LlamaPreTrainedModel.__init__(self, config)
+        BloomPreTrainedModel.__init__(self, config)
         self.transformer = DistributedBloomModel(config)
         self.lm_head = LMHead(config, self.transformer.word_embeddings)
 
@@ -250,16 +250,16 @@ class DistributedBloomForCausalLM(_FromPretrainedDefaultsMixin, RemoteGeneration
             self.lm_head.bias[...] = new_lm_head.bias
 
 
-class DistributedLlamaForSequenceClassification(_FromPretrainedDefaultsMixin, LlamaForSequenceClassification):
+class DistributedBloomForSequenceClassification(_FromPretrainedDefaultsMixin, BloomForSequenceClassification):
     _keys_to_ignore_on_load_missing = (
-        LlamaForSequenceClassification._keys_to_ignore_on_load_missing
+        BloomForSequenceClassification._keys_to_ignore_on_load_missing
         + DistributedBloomModel._keys_to_ignore_on_load_missing
     )
 
     config_class = DistributedBloomConfig
 
     def __init__(self, config: DistributedBloomConfig):
-        LlamaPreTrainedModel.__init__(self, config)
+        BloomPreTrainedModel.__init__(self, config)
         self.num_labels = config.num_labels
 
         self.transformer = DistributedBloomModel(config)
