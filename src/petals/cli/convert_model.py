@@ -8,7 +8,9 @@ import transformers
 from hivemind.utils.logging import get_logger
 from huggingface_hub import HfApi, Repository
 from tqdm.auto import tqdm
-from transformers.models.bloom.modeling_bloom import BloomModel
+# from transformers.models.bloom.modeling_bloom import BloomModel
+from transformers import AutoTokenizer, AutoModelForCausalLM
+
 
 from petals.bloom.from_pretrained import BLOCK_BRANCH_PREFIX, CLIENT_BRANCH
 from petals.client import DistributedBloomConfig
@@ -53,7 +55,7 @@ def main():
     )
     config.dht_prefix = args.output_repo
 
-    model = BloomModel.from_pretrained(
+    model = AutoModelForCausalLM.from_pretrained(
         args.model, use_auth_token=args.use_auth_token, revision=args.revision, torch_dtype=DTYPE_MAP[args.torch_dtype]
     )
     if args.resize_token_embeddings:
@@ -61,7 +63,7 @@ def main():
         model.resize_token_embeddings(args.resize_token_embeddings)
         config.vocab_size = args.resize_token_embeddings
 
-    tokenizer = transformers.AutoTokenizer.from_pretrained(
+    tokenizer = AutoTokenizer.from_pretrained(
         args.model, use_auth_token=args.use_auth_token, revision=args.revision
     )
     os.makedirs(args.output_path, exist_ok=True)

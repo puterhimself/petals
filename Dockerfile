@@ -5,7 +5,7 @@ LABEL repository="petals"
 WORKDIR /home
 # Set en_US.UTF-8 locale by default
 RUN echo "LC_ALL=en_US.UTF-8" >> /etc/environment
-
+ 
 # Install packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
   build-essential \
